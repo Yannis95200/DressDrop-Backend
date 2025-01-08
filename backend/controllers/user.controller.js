@@ -32,14 +32,14 @@ module.exports.userInfo = async (req, res) => {
 
 // Mettre à jour un utilisateur
 module.exports.updateUser = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // Récupérer l'ID utilisateur depuis les paramètres
 
     // Vérifier si l'ID est valide
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({ message: 'ID utilisateur invalide : ' + id });
     }
 
-    const { pseudo } = req.body;
+    const { pseudo } = req.body;  // Supposer que le pseudo vient du corps de la requête
 
     // Vérifier si le pseudo est fourni
     if (!pseudo) {
@@ -49,16 +49,16 @@ module.exports.updateUser = async (req, res) => {
     try {
         // Mettre à jour l'utilisateur en utilisant findOneAndUpdate
         const updatedUser = await UserModel.findOneAndUpdate(
-            { _id: id },
-            { $set: { pseudo: pseudo } },
-            { new: true, upsert: false, setDefaultsOnInsert: true }
+            { _id: id },  // Recherche par ID
+            { $set: { pseudo: pseudo } },  // Mettre à jour le pseudo
+            { new: true, upsert: false, setDefaultsOnInsert: true }  // Renvoie le document mis à jour
         );
 
         if (!updatedUser) {
             return res.status(404).json({ message: 'Utilisateur introuvable' });
         }
 
-        res.status(200).json(updatedUser);
+        res.status(200).json(updatedUser);  // Retourne l'utilisateur mis à jour
     } catch (err) {
         res.status(500).json({ message: 'Erreur lors de la mise à jour de l\'utilisateur', error: err.message });
     }

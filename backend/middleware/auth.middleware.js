@@ -46,17 +46,17 @@ module.exports.requireAuth = (req, res, next) => {
   const token = req.cookies?.jwt;
 
   if (!token) {
-    console.log('Aucun token trouvé');
-    return res.status(401).json({ erreur: 'Accès refusé. Aucun token fourni.' });
+    console.log('No token found');
+    return res.status(401).json({ error: 'Access denied. No token provided.' });
   }
 
   jwt.verify(token, process.env.TOKEN_SECRET, (err, decodedToken) => {
     if (err) {
-      console.error('Token invalide :', err.message);
-      return res.status(401).json({ erreur: 'Token invalide ou expiré.' });
+      console.error('Invalid token:', err.message);
+      return res.status(401).json({ error: 'Invalid or expired token.' });
     }
 
-    console.log('ID utilisateur authentifié :', decodedToken.id);
+    console.log('Authenticated user ID:', decodedToken.id);
     next();
   });
 };

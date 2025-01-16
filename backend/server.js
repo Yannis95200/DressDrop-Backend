@@ -47,7 +47,15 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/user", require("./routes/user.routes"));
 
 // **NOUVELLE ROUTE POUR LES POSTS**
-app.use("/post", require("./routes/post.routes"));
+
+// routes pour les vetement 
+
+app.use("/clothes", require("./routes/clothes.routes"));
+
+app.use("/owner", require("./routes/shop.routes"));
+
+
+ 
 
 // Lancer le serveur
 app.listen(port, () => console.log("Le serveur a démarré au port " + port));

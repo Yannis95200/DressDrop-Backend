@@ -60,3 +60,29 @@ module.exports.requireAuth = (req, res, next) => {
     next();
   });
 };
+
+module.exports.checkRole = (roles) => {
+  return (req, res, next) => {
+    const token = req.headers.authorization?.split(" ")[1];
+    console.log("Token reçu :", token); // Log du token reçu
+    if (!token) {
+      console.log("Aucun token trouvé");
+      return res.status(401).json({ message: "Unauthorized: No token provided" });
+    }
+
+    try {
+      const decodedToken = jwt.verify(token, process.env.TOKEN_SECRET);
+      console.log("Token décodé :", decodedToken); // Log des détails du token
+      if (!roles.includes(decodedToken.role)) {
+        return res.status(403).json({ message: "Forbidden: Access denied" });
+      }
+      req.user = decodedToken;
+      next();
+    } catch (err) {
+      console.error("Erreur de validation du token :", err.message);
+      res.status(401).json({ message: "Invalid token" });
+    }
+  };
+};
+
+

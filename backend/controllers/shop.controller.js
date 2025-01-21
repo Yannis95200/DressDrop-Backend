@@ -104,25 +104,28 @@ exports.getClothesByShop = async (req, res) => {
   }
 };
 
-// Supprimer une boutique
 exports.deleteShop = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedShop = await Shop.findByIdAndDelete(id);
+    // Trouver la boutique pour vérifier le propriétaire
+    const shop = await Shop.findById(id);
 
-       // Vérifiez que l'utilisateur est un seller
-       if (req.user.role !== "seller") {
-        return res.status(403).json({ message: "Accès refusé. Cette action est réservée aux vendeurs." });
-      }
-  
-
-    if (!deletedShop) {
+    if (!shop) {
       return res.status(404).json({ message: "Boutique introuvable" });
     }
+
+    // // Vérifiez que l'utilisateur est un vendeur et qu'il est le créateur de la boutique`
+    if (shop.ownerId.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Accès refusé. Vous n'êtes pas autorisé à supprimer cette boutique." });
+    }
+
+    // Supprimer la boutique
+    await shop.deleteOne();
 
     res.status(200).json({ message: "Boutique supprimée avec succès" });
   } catch (error) {
     res.status(500).json({ message: "Erreur lors de la suppression de la boutique", error: error.message });
   }
 };
+

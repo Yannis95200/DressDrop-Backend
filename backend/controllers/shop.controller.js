@@ -2,11 +2,14 @@ const Shop = require("../models/shop.model");
 const Clothes = require("../models/clothes.model");
 const geocoder = require("../utils/geocoding")
 
-// Créer une boutique
 exports.createShop = async (req, res) => {
   try {
     const { name, description, locationName, image } = req.body;
     const ownerId = req.user.id;
+
+    if (!name || !description || !locationName) {
+      return res.status(400).json({ message: "Tous les champs requis doivent être remplis." });
+    }
 
     // Géocodage du nom de la ville pour obtenir les coordonnées
     const geoData = await geocoder.geocode(locationName);
@@ -21,8 +24,8 @@ exports.createShop = async (req, res) => {
       ownerId,
       name,
       description,
-      location: { coordinates },
-      image,
+      location: { type: "Point", coordinates },
+      image: image || "./uploads/shop/default-shop.png",
     });
 
     await shop.save();
@@ -43,41 +46,41 @@ exports.getAllShops = async (req, res) => {
   }
 };
 
-// Rechercher des boutiques proches
-exports.getNearbyShops = async (req, res) => {
-  try {
-    const { latitude, longitude, radius = 10 } = req.query;
-
-    if (!latitude || !longitude) {
-      return res.status(400).json({ message: "Latitude et longitude sont requises" });
-    }
-
-    const nearbyShops = await Shop.find({
-      location: {
-        $geoWithin: {
-          $centerSphere: [[longitude, latitude], radius / 6378.1], // Radius en radians (6378.1 km = rayon de la Terre)
-        },
-      },
-    });
-
-    res.status(200).json(nearbyShops);
-  } catch (error) {
-    res.status(500).json({ message: "Erreur lors de la recherche des boutiques proches", error: error.message });
-  }
-};
-
 // Mettre à jour une boutique
 exports.updateShop = async (req, res) => {
   try {
-    const { id } = req.params;
-    const updates = req.body;
+    const { id } = req.params; // ID de la boutique
+    const { name, description, locationName } = req.body;
 
-    const updatedShop = await Shop.findByIdAndUpdate(id, updates, { new: true });
-
-    if (!updatedShop) {
-      return res.status(404).json({ message: "Boutique introuvable" });
+    // Vérifiez que l'utilisateur est un seller
+    if (req.user.role !== "seller") {
+      return res.status(403).json({ message: "Accès refusé. Cette action est réservée aux vendeurs." });
     }
 
+    // Vérifiez que l'utilisateur est le propriétaire de la boutique
+    const shop = await Shop.findById(id);
+    if (!shop) {
+      return res.status(404).json({ message: "Boutique introuvable." });
+    }
+    if (shop.ownerId.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Vous n'êtes pas autorisé à modifier cette boutique." });
+    }
+
+    // Mise à jour des données
+    const updates = { name, description };
+    if (locationName) {
+      const geoData = await geocoder.geocode(locationName);
+      if (geoData && geoData.length > 0) {
+        updates.location = {
+          type: "Point",
+          coordinates: [geoData[0].longitude, geoData[0].latitude],
+        };
+      } else {
+        return res.status(400).json({ message: "Nom de localisation invalide." });
+      }
+    }
+
+    const updatedShop = await Shop.findByIdAndUpdate(id, updates, { new: true });
     res.status(200).json({ message: "Boutique mise à jour avec succès", shop: updatedShop });
   } catch (error) {
     res.status(500).json({ message: "Erreur lors de la mise à jour de la boutique", error: error.message });
@@ -107,6 +110,12 @@ exports.deleteShop = async (req, res) => {
     const { id } = req.params;
 
     const deletedShop = await Shop.findByIdAndDelete(id);
+
+       // Vérifiez que l'utilisateur est un seller
+       if (req.user.role !== "seller") {
+        return res.status(403).json({ message: "Accès refusé. Cette action est réservée aux vendeurs." });
+      }
+  
 
     if (!deletedShop) {
       return res.status(404).json({ message: "Boutique introuvable" });

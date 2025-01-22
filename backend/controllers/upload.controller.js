@@ -34,7 +34,7 @@ module.exports.uploadProfil = async (req, res) => {
 
     // Utilisez le chemin du fichier (sur le disque) et renvoyez-le à l'utilisateur
     const filePath = path.join(uploadDir, filename);
-    
+
     // Déplacer le fichier du répertoire temporaire vers le répertoire cible
     fs.promises.rename(req.file.path, filePath);
 

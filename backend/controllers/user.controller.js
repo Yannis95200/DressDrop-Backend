@@ -14,21 +14,21 @@ module.exports.getAllUsers = async (req, res) => {
 // Récupérer les informations d'un utilisateur spécifique
 module.exports.userInfo = async (req, res) => {
     const { id } = req.params;
-  
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'ID utilisateur invalide : ' + id });
+        return res.status(400).json({ message: 'ID utilisateur invalide : ' + id });
     }
-  
+
     try {
-      const user = await UserModel.findById(id);
-      if (!user) {
-        return res.status(404).json({ message: 'Utilisateur introuvable' });
-      }
-      res.status(200).json(user);
+        const user = await UserModel.findById(id);
+        if (!user) {
+            return res.status(404).json({ message: 'Utilisateur introuvable' });
+        }
+        res.status(200).json(user);
     } catch (err) {
-      res.status(500).json({ message: 'Erreur serveur', error: err.message });
+        res.status(500).json({ message: 'Erreur serveur', error: err.message });
     }
-  };
+};
 
 // Mettre à jour un utilisateur
 module.exports.updateUser = async (req, res) => {

@@ -54,8 +54,20 @@ app.use("/clothes", require("./routes/clothes.routes"));
 
 app.use("/owner", require("./routes/shop.routes"));
 
+// routes pour le systemes de commande
 
- 
+app.use("/cart", require("./routes/cart.routes"));
+
+app.use('/orders', require('./routes/order.routes'));
+
+
+app.use('/delivery', require('./routes/delivery.routes'));
+
+
+
+// paiement
+app.use('/stripe', require('./routes/stripe.routes'));
+
 
 // Lancer le serveur
 app.listen(port, () => console.log("Le serveur a démarré au port " + port));

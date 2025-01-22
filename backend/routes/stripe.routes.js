@@ -8,8 +8,8 @@ router.post('/checkout', async (req, res) => {
 
     // Crée une intention de paiement avec Stripe
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: totalPrice * 100, // Montant en cents
-      currency: 'usd',
+      amount: totalPrice * 100,
+      currency: 'eur',
       payment_method_types: ['card'],
     });
 

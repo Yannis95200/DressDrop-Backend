@@ -4,12 +4,11 @@ const clothesController = require("../controllers/clothes.controller");
 const { checkRole } = require("../middleware/auth.middleware");
 
 // Routes réservées aux vendeurs
-router.post("/add", checkRole(["seller"]), clothesController.addClothes); // Ajouter un vêtement
-router.put("/:id", checkRole(["seller"]), clothesController.updateClothes);     // Modifier un vêtement
-router.delete("/:id", checkRole(["seller"]), clothesController.deleteClothes);    // Supprimer un vêtement
-
+router.post("/add", checkRole(["seller"]), clothesController.addClothes);
+router.put("/:id", checkRole(["seller"]), clothesController.updateClothes);
+router.delete("/:id", checkRole(["seller"]), clothesController.deleteClothes);
 // Routes accessibles à tous
-router.get("/", clothesController.getAllClothes);   // Voir tous les vêtements
-router.get("/:id", clothesController.getClothesById); // Voir un vêtement spécifique
+router.get("/", clothesController.getAllClothes);
+router.get("/:id", clothesController.getClothesById);
 
 module.exports = router;

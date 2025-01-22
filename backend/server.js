@@ -58,10 +58,11 @@ app.use("/owner", require("./routes/shop.routes"));
 
 app.use("/cart", require("./routes/cart.routes"));
 
-app.use('/orders', require('./routes/order.routes'));
+app.use('/order', require('./routes/order.routes'));
 
 
 app.use('/delivery', require('./routes/delivery.routes'));
+app.use(express.urlencoded({ extended: true }));
 
 
 

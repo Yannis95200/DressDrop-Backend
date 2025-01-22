@@ -9,6 +9,6 @@ router.post('/add', cartController.addToCart);
 router.delete('/remove/:itemId', cartController.removeFromCart);
 
 // Obtenez le contenu du panier
-router.get('/', cartController.getCart);
+router.get('/:userId', cartController.getCart);
 
 module.exports = router;

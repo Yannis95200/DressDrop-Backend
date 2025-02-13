@@ -1,39 +1,91 @@
 const UserModel = require('../models/user.model');
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt");
+const axios = require("axios");
 const { signUpErrors, signInErrors } = require('../utils/errors.utils');
-
+const geocoder = require('../utils/geocoding');
 
 
 const maxAge = 3 * 24 * 60 * 60 * 1000;
 
+// API de géolocalisation (OpenStreetMap)
+const GEOCODE_API = "https://nominatim.openstreetmap.org/search";
+
+// Fonction pour convertir une adresse en latitude/longitude
+const getCoordinatesFromAddress = async (address) => {
+    try {
+        const formattedAddress = `${address.street}, ${address.city}, ${address.postalCode}, ${address.country}`;
+        const response = await axios.get(GEOCODE_API, {
+            params: {
+                q: formattedAddress,
+                format: "json",
+                limit: 1
+            }
+        });
+
+        if (response.data.length > 0) {
+            return {
+                type: "Point",
+                coordinates: [
+                    parseFloat(response.data[0].lon), // Longitude
+                    parseFloat(response.data[0].lat)  // Latitude
+                ]
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error("Erreur de géocodage:", error);
+        return null;
+    }
+};
+
 // Inscription de l'utilisateur
-
-
 module.exports.signUp = async (req, res) => {
-  const { pseudo, email, password, role } = req.body; // Ajout du rôle dans la destructuration
-
-  console.log('Requête reçue:', { pseudo, email, password, role });
+  const { pseudo, email, password, role, address, documents } = req.body;
 
   try {
-    // Vérifier si le rôle est fourni
-    if (!role) {
-      return res.status(400).json({ message: "Le rôle est requis et ne peut pas être vide." });
-    }
+    if (!role) return res.status(400).json({ message: "Le rôle est requis." });
 
-    // Validation du rôle pour éviter des valeurs non autorisées
-    const validRoles = ["seller", "buyer"];
+    const validRoles = ["seller", "buyer", "delivery"];
     if (!validRoles.includes(role)) {
-      return res.status(400).json({ message: "Le rôle spécifié n'est pas valide." });
+      return res.status(400).json({ message: "Rôle invalide." });
     }
 
-    // Création de l'utilisateur avec le rôle
-    const user = await UserModel.create({ pseudo, email, password, role });
-    res.status(201).json({ user: user._id, role: user.role });
+    // Vérification des documents si l'utilisateur est un livreur
+    if (!documents || !documents.drivingLicense || !documents.insurance) {
+      return res.status(400).json({ message: "Les documents (permis et assurance) sont requis pour les livreurs." });
+    }
+
+    let userLocation = null;
+    if (address) {
+      const { street, city, postalCode, country } = address;
+      if (!street || !city || !postalCode || !country) {
+        return res.status(400).json({ message: "Adresse invalide." });
+      }
+
+      // Utiliser la fonction getCoordinatesFromAddress pour récupérer les coordonnées GPS
+      userLocation = await getCoordinatesFromAddress(address);
+
+      if (!userLocation) {
+        return res.status(400).json({ message: "Adresse introuvable." });
+      }
+    }
+
+    // Création de l'utilisateur
+    const user = await UserModel.create({
+      pseudo,
+      email,
+      password,
+      role,
+      address,
+      documents: role === "delivery" ? documents : undefined,
+      location: userLocation
+    });
+
+    res.status(201).json({ user: user._id, role: user.role, location: user.location });
   } catch (err) {
-    console.error('Erreur lors de l\'inscription:', err);
-    const errors = signUpErrors(err);
-    res.status(400).json({ errors });
+    console.error("Erreur lors de l'inscription:", err);
+    res.status(400).json({ errors: err.message });
   }
 };
 
@@ -42,32 +94,16 @@ module.exports.signIn = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Vérification de l'utilisateur
     const user = await UserModel.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "Utilisateur non trouvé" });
-    }
+    if (!user) return res.status(404).json({ message: "Utilisateur non trouvé" });
 
-    // Vérification du mot de passe
     const auth = await bcrypt.compare(password, user.password);
-    if (!auth) {
-      return res.status(401).json({ message: "Mot de passe incorrect" });
-    }
+    if (!auth) return res.status(401).json({ message: "Mot de passe incorrect" });
 
-    // Génération du token
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.TOKEN_SECRET,
-      { expiresIn: "1d" }
-    );
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.TOKEN_SECRET, { expiresIn: "1d" });
 
-    // Ajouter le token dans les cookies (HTTP-Only pour plus de sécurité)
-    res.cookie("jwt", token, {
-      httpOnly: true, // Empêche les scripts côté client d'accéder au cookie
-      maxAge: 24 * 60 * 60 * 1000, // 1 jour en millisecondes
-    });
+    res.cookie("jwt", token, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
 
-    // Réponse avec un message de succès
     res.status(200).json({ message: "Connexion réussie !" });
   } catch (err) {
     console.error("Erreur lors de la connexion :", err.message);

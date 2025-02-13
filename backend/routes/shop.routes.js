@@ -8,10 +8,10 @@ const upload = multer({ dest: 'uploads/' });
 
 router.post("/shop", checkRole(["seller"]), shopController.createShop);
 router.get("/", shopController.getAllShops);
-router.put("/shop/:id", checkRole(["seller"]), shopController.updateShop);
-router.get("/shop/:shopId/clothes", shopController.getClothesByShop);
-router.delete("/shop/:id", checkRole(["seller"]), shopController.deleteShop);
-
+router.put("/:id", checkRole(["seller"]), shopController.updateShop);
+router.get("/:shopId/clothes", shopController.getClothesByShop);
+router.delete("/:id", checkRole(["seller"]), shopController.deleteShop);
+router.get("/nearby/:userId", shopController.getNearbyShopsForUser);
 router.post('/upload-shop-image', upload.single('image'), uploadController.uploadShopImage);
 
 module.exports = router;

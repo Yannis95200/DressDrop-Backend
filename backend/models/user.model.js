@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema(
     },
     picture: {
       type: String,
-      default: "./uploads/profil/random-user.png",
+      default: './uploads/profil/random-user.png',
     },
     bio: {
       type: String,
@@ -36,17 +36,30 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["seller", "buyer"], // Rôles disponibles
-      default: "buyer", // Rôle par défaut
+      enum: ['seller', 'buyer', "delivery"],
+      default: 'buyer',
     },
-  },
-  {
-    timestamps: true,
-  }
-);
+    address: {
+      street: { type: String, required: false, trim: true },
+      city: { type: String, required: false, trim: true },
+      postalCode: { type: String, required: false, trim: true },
+      country: { type: String, required: false, trim: true },
+    },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number], default: [0, 0] }
+    },
 
+    documents: {
+      drivingLicense: { type: String, required: function() { return this.role === "delivery"; } },
+      insurance: { type: String, required: function() { return this.role === "delivery"; } }
+    }
+  }, { timestamps: true });
+  
+  // Index géospatial pour permettre la recherche par localisation
+  userSchema.index({ location: "2dsphere" });
 // Avant d'enregistrer, hachez le mot de passe
-userSchema.pre("save", async function (next) {
+userSchema.pre('save', async function (next) {
   const salt = await bcrypt.genSalt();
   this.password = await bcrypt.hash(this.password, salt);
   next();
@@ -60,11 +73,11 @@ userSchema.statics.login = async function (email, password) {
     if (auth) {
       return user;
     }
-    throw Error("incorrect password");
+    throw Error('incorrect password');
   }
-  throw Error("incorrect email");
+  throw Error('incorrect email');
 };
 
-const UserModel = mongoose.model("user", userSchema);
+const UserModel = mongoose.model('User', userSchema);
 
 module.exports = UserModel;

@@ -1,18 +1,24 @@
 const mongoose = require("mongoose");
 
 const shopSchema = new mongoose.Schema({
-  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Le vendeur propriétaire
-  name: { type: String, required: true, unique: true }, // Nom unique de la boutique
-  description: { type: String, required: true }, // Description de la boutique
-  location: {
-    type: { type: String, default: "Point" },
-    coordinates: { type: [Number], required: true }, // [longitude, latitude]
+  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  name: { type: String, required: true, unique: true },
+  description: { type: String, required: true },
+  ShopAddress: {
+    street: String,
+    city: String,
+    postalCode: String,
+    country: String,
   },
-  image: { type: String, default: "./uploads/shop/default-shop.png" }, // Image de la boutique
+  image: { type: String, default: "./uploads/shop/default-shop.png" },
   ratings: {
-    average: { type: Number, default: 0 }, // Moyenne des évaluations
-    count: { type: Number, default: 0 } // Nombre d’évaluations
+    average: { type: Number, default: 0 },
+    count: { type: Number, default: 0 },
   },
+  location: { 
+    type: { type: String, enum: ["Point"], required: true, default: "Point" },
+    coordinates: { type: [Number], required: true }
+  }
 }, { timestamps: true });
 
 // Index géospatial pour rechercher des boutiques proches

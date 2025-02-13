@@ -84,8 +84,8 @@ module.exports.uploadShopImage = async (req, res) => {
 
     // Utilisez le nom original du fichier (sans ajout du nom de la boutique)
     const originalFileName = req.file.originalname;
-    const fileExtension = path.extname(originalFileName); // Récupère l'extension du fichier
-    const filename = `${originalFileName}`; // Le nom original du fichier + l'extension d'origine
+    const fileExtension = path.extname(originalFileName);
+    const filename = `${originalFileName}`;
 
     // Définir le répertoire de destination
     const uploadDir = path.join(__dirname, "../client/public/uploads/shops");

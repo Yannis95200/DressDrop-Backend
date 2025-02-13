@@ -1,5 +1,34 @@
 const mongoose = require('mongoose');
 const UserModel = require('../models/user.model');
+const axios = require("axios");
+
+
+// API de géolocalisation OpenStreetMap
+const GEOCODE_API = "https://nominatim.openstreetmap.org/search";
+
+// Fonction pour convertir une adresse en latitude/longitude
+const getCoordinatesFromAddress = async (address) => {
+    try {
+        const formattedAddress = `${address.street}, ${address.city}, ${address.postalCode}, ${address.country}`;
+        const response = await axios.get(GEOCODE_API, {
+            params: { q: formattedAddress, format: "json", limit: 1 }
+        });
+
+        if (response.data.length > 0) {
+            return {
+                type: "Point",
+                coordinates: [
+                    parseFloat(response.data[0].lon),
+                    parseFloat(response.data[0].lat)
+                ]
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error("Erreur de géocodage:", error);
+        return null;
+    }
+};
 
 // Récupérer tous les utilisateurs
 module.exports.getAllUsers = async (req, res) => {
@@ -32,37 +61,49 @@ module.exports.userInfo = async (req, res) => {
 
 // Mettre à jour un utilisateur
 module.exports.updateUser = async (req, res) => {
-    const { id } = req.params; // Récupérer l'ID utilisateur depuis les paramètres
+    const { id } = req.params;
 
     // Vérifier si l'ID est valide
     if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'ID utilisateur invalide : ' + id });
+        return res.status(400).json({ message: "ID utilisateur invalide : " + id });
     }
 
-    const { pseudo } = req.body;  // Supposer que le pseudo vient du corps de la requête
-
-    // Vérifier si le pseudo est fourni
-    if (!pseudo) {
-        return res.status(400).json({ message: 'Le pseudo est requis' });
+    const { pseudo, address } = req.body;
+    if (!pseudo && !address) {
+        return res.status(400).json({ message: "Aucune donnée à mettre à jour" });
     }
 
     try {
-        // Mettre à jour l'utilisateur en utilisant findOneAndUpdate
+        const updateFields = {};
+        if (pseudo) updateFields.pseudo = pseudo;
+
+        // Si l'adresse est mise à jour, recalculer la localisation
+        if (address) {
+            const newLocation = await getCoordinatesFromAddress(address);
+            if (!newLocation) {
+                return res.status(400).json({ message: "Impossible de localiser cette adresse." });
+            }
+            updateFields.address = address;
+            updateFields.location = newLocation;
+        }
+
+        // Mettre à jour l'utilisateur
         const updatedUser = await UserModel.findOneAndUpdate(
-            { _id: id },  // Recherche par ID
-            { $set: { pseudo: pseudo } },  // Mettre à jour le pseudo
-            { new: true, upsert: false, setDefaultsOnInsert: true }  // Renvoie le document mis à jour
+            { _id: id },
+            { $set: updateFields },
+            { new: true, upsert: false, setDefaultsOnInsert: true }
         );
 
         if (!updatedUser) {
-            return res.status(404).json({ message: 'Utilisateur introuvable' });
+            return res.status(404).json({ message: "Utilisateur introuvable" });
         }
 
-        res.status(200).json(updatedUser);  // Retourne l'utilisateur mis à jour
+        res.status(200).json(updatedUser);
     } catch (err) {
-        res.status(500).json({ message: 'Erreur lors de la mise à jour de l\'utilisateur', error: err.message });
+        res.status(500).json({ message: "Erreur lors de la mise à jour de l'utilisateur", error: err.message });
     }
 };
+
 
 // Supprimer un utilisateur
 module.exports.deleteUser = async (req, res) => {
@@ -85,4 +126,4 @@ module.exports.deleteUser = async (req, res) => {
     } catch (err) {
         res.status(500).json({ message: 'Erreur lors de la suppression de l\'utilisateur', error: err.message });
     }
-};
+}

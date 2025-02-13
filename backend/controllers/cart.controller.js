@@ -8,7 +8,7 @@ module.exports.addToCart = async (req, res) => {
 
         // Vérifiez si les champs requis sont présents
         if (!userId || !items || items.length === 0 || !items[0].productId) {
-            return res.status(400).json({ message: 'userId and items with productId are required' });
+            return res.status(400).json({ message: 'userId et les éléments avec productId sont requis' });
         }
 
         // Recherchez un panier existant pour l'utilisateur
@@ -49,7 +49,7 @@ module.exports.addToCart = async (req, res) => {
         res.status(200).json(updatedCart);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Error adding to cart', error });
+        res.status(500).json({ message: "Erreur lors de l'ajout au panier", error });
     }
 };
 
@@ -60,21 +60,21 @@ module.exports.removeFromCart = async (req, res) => {
 
         // Vérifiez si les champs nécessaires sont présents
         if (!userId || !productId || !quantityToRemove) {
-            return res.status(400).json({ message: 'userId, productId, and quantityToRemove are required' });
+            return res.status(400).json({ message: 'userId, productId etQuantityToRemove sont requis' });
         }
 
         // Trouvez le panier de l'utilisateur
         let cart = await CartModel.findOne({ userId });
 
         if (!cart) {
-            return res.status(404).json({ message: 'Cart not found' });
+            return res.status(404).json({ message: 'Panier introuvable' });
         }
 
         // Trouvez l'élément dans le panier
         const existingItem = cart.items.find((item) => item.productId.toString() === productId);
 
         if (!existingItem) {
-            return res.status(404).json({ message: 'Product not found in cart' });
+            return res.status(404).json({ message: 'Produit introuvable dans le panier' });
         }
 
         // Si la quantité à enlever est plus grande que la quantité existante, supprimez l'élément
@@ -103,10 +103,10 @@ module.exports.removeFromCart = async (req, res) => {
         const updatedCart = await cart.save();
 
         // Répondre avec un message de succès
-        res.status(200).json({ message: 'Product removed successfully', updatedCart });
+        res.status(200).json({ message: 'Produit supprimé avec succès', updatedCart });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Error removing from cart', error });
+        res.status(500).json({ message: 'Erreur lors de la suppression du panier', error });
     }
 };
 
@@ -117,14 +117,14 @@ module.exports.getCart = async (req, res) => {
         const { userId } = req.params;
         // Vérifiez si l'ID utilisateur est présent
         if (!userId) {
-            return res.status(400).json({ message: 'userId is required' });
+            return res.status(400).json({ message: "l'ID utilisateur est requis" });
         }
 
         // Recherchez le panier de l'utilisateur
         const cart = await CartModel.findOne({ userId });
 
         if (!cart) {
-            return res.status(404).json({ message: 'Cart not found' });
+            return res.status(404).json({ message: 'Panier introuvable' });
         }
 
         // Récupérez les détails des produits dans le panier
@@ -146,6 +146,6 @@ module.exports.getCart = async (req, res) => {
         res.status(200).json(cart);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Error fetching cart', error });
+        res.status(500).json({ message: 'Erreur lors de la récupération du panier', error });
     }
 };

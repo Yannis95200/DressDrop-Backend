@@ -16,8 +16,10 @@ const app = express();
 
 // Middleware pour parser les données JSON et URL-encoded
 app.use(express.urlencoded({ extended: false }));
+app.use(express.json())
 
 // Middleware CORS
+// Configuration CORS pour Express
 app.use(cors({
   origin: ["http://localhost:3000", "http://10.0.2.2:5000"],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
@@ -37,11 +39,6 @@ app.use((req, res, next) => {
 // Servir les fichiers statiques (images, fichiers, etc.)
 app.use('/uploads', express.static('uploads'));
 
-// Middleware d'authentification JWT
-app.get("*", checkUser);
-app.get("/jwtid", requireAuth, (req, res) => {
-  res.status(200).send(res.locals.user._id);
-});
 
 // Routes
 app.use("/user", require("./routes/user.routes"));

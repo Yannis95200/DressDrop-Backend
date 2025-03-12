@@ -14,7 +14,7 @@ module.exports.signUp = async (req, res) => {
   const { pseudo, email, password, role, address } = req.body;
 
   try {
-    console.log("🔍 Données reçues :", req.body); //
+    console.log("Données reçues :", req.body); //
 
     if (!role) return res.status(400).json({ message: "Le rôle est requis." });
 
@@ -30,7 +30,6 @@ module.exports.signUp = async (req, res) => {
         return res.status(400).json({ message: "Adresse incomplète." });
       }
 
-      // Géolocalisation de l'adresse
       userLocation = await getCoordinatesFromAddress(address);
 
       if (!userLocation) {
@@ -38,7 +37,6 @@ module.exports.signUp = async (req, res) => {
       }
     }
 
-    // Vérifier si l'utilisateur existe déjà
     const existingUser = await UserModel.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Cet email est déjà utilisé." });
@@ -63,11 +61,20 @@ module.exports.signUp = async (req, res) => {
 
 // Connexion de l'utilisateur
 module.exports.signIn = async (req, res) => {
-  const { email, password } = req.body;
-
   try {
+    console.log("🔍 Données reçues :", req.body);
+
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email et mot de passe requis." });
+    }
+
     const user = await UserModel.findOne({ email });
-    if (!user) return res.status(404).json({ message: "Utilisateur non trouvé" });
+    if (!user) {
+      console.log(`Utilisateur non trouvé pour l'email : ${email}`);
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
 
     const auth = await bcrypt.compare(password, user.password);
     if (!auth) return res.status(401).json({ message: "Mot de passe incorrect" });
@@ -76,7 +83,6 @@ module.exports.signIn = async (req, res) => {
 
     res.cookie("jwt", token, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
 
-    // Ajouter `userId` dans la réponse
     res.status(200).json({
       message: "Connexion réussie !",
       token,
@@ -87,6 +93,7 @@ module.exports.signIn = async (req, res) => {
     res.status(500).json({ message: "Erreur serveur" });
   }
 };
+
 
 
 module.exports.logout = (req, res) => {

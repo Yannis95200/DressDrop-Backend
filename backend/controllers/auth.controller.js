@@ -14,7 +14,7 @@ module.exports.signUp = async (req, res) => {
   const { pseudo, email, password, role, address } = req.body;
 
   try {
-    console.log("Données reçues :", req.body); //
+    console.log("Données reçues :", req.body);
 
     if (!role) return res.status(400).json({ message: "Le rôle est requis." });
 
@@ -62,7 +62,7 @@ module.exports.signUp = async (req, res) => {
 // Connexion de l'utilisateur
 module.exports.signIn = async (req, res) => {
   try {
-    console.log("🔍 Données reçues :", req.body);
+    console.log("Données reçues :", req.body);
 
     const { email, password } = req.body;
 

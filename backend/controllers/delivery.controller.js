@@ -138,35 +138,36 @@ module.exports.getAvailableDeliveries = async (req, res) => {
   }
 };
 
-;const updateDeliveryLocation = async (deliveryId, coordinates) => {
+module.exports.updateLiveTracking = async (req, res) => {
   try {
-    const delivery = await DeliveryModel.findById(deliveryId);
-    if (!delivery) {
-      throw new Error("Livraison non trouvée");
+    const { orderId } = req.params;
+    const { coordinates } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ message: "ID de commande invalide" });
     }
 
-    // Mise à jour des coordonnées et de la dernière mise à jour
-    delivery.tracking.currentLocation = {
-      coordinates,
-      timestamp: new Date(),
-    };
-    delivery.tracking.lastUpdate = new Date();
+    const delivery = await DeliveryModel.findOne({ orderId });
+    if (!delivery) {
+      return res.status(404).json({ message: "Livraison non trouvée" });
+    }
 
-    delivery.tracking.estimatedArrivalTime = new Date(Date.now() + 30 * 60 * 1000);
+    delivery.liveTracking = {
+      liveCoordinates: {
+        type: "Point",
+        coordinates: coordinates,
+      },
+      lastUpdated: Date.now(),
+    };
 
     await delivery.save();
-    
-    // Émettre un événement WebSocket pour informer le client
-    io.emit('delivery-update', {
-      deliveryId,
-      location: coordinates,
-      estimatedArrivalTime: delivery.tracking.estimatedArrivalTime
-    });
+
+    res.status(200).json({ message: "Suivi mis à jour", delivery });
   } catch (error) {
-    console.error("Erreur lors de la mise à jour de la localisation de la livraison", error);
+    console.error("Erreur lors de la mise à jour du suivi :", error);
+    res.status(500).json({ message: "Erreur serveur", error });
   }
 };
-
 
 module.exports.acceptDelivery = async (req, res) => {
   const deliveryId = req.params.id;

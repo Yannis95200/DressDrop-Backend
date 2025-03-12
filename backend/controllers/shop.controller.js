@@ -61,7 +61,7 @@ exports.updateShop = async (req, res) => {
 
     // Mise à jour des données
     const updates = { name, description, ShopAddress };
-    
+
     if (ShopAddress) {
       // Géocodage de l'adresse de la boutique pour obtenir les coordonnées
       const geoData = await geocoder.geocode(`${ShopAddress.street}, ${ShopAddress.city}, ${ShopAddress.country}`);
@@ -89,12 +89,19 @@ exports.updateShop = async (req, res) => {
 exports.getAllShops = async (req, res) => {
   try {
     const shops = await Shop.find();
-    res.status(200).json(shops);
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+    // Modifier chaque shop pour inclure l'URL complète de l'image
+    const shopsWithFullImage = shops.map(shop => ({
+      ...shop._doc,
+      image: shop.image.startsWith("/uploads") ? `${baseUrl}${shop.image}` : shop.image
+    }));
+
+    res.status(200).json(shopsWithFullImage);
   } catch (error) {
     res.status(500).json({ message: "Erreur lors de la récupération des boutiques", error: error.message });
   }
 };
-
 // Récupérer les vêtements d'une boutique
 exports.getClothesByShop = async (req, res) => {
   try {
@@ -141,8 +148,6 @@ exports.deleteShop = async (req, res) => {
 module.exports.getNearbyShopsForUser = async (req, res) => {
   try {
     const { userId } = req.params;
-
-    // Vérifier si l'utilisateur existe et a une localisation
     const user = await User.findById(userId);
     if (!user || !user.location || !user.location.coordinates) {
       return res.status(404).json({ message: "Utilisateur non trouvé ou localisation manquante." });
@@ -150,7 +155,6 @@ module.exports.getNearbyShopsForUser = async (req, res) => {
 
     const [longitude, latitude] = user.location.coordinates;
 
-    // Rechercher les boutiques proches avec une distance de 20 km
     const shops = await Shop.find({
       location: {
         $near: {
@@ -167,5 +171,29 @@ module.exports.getNearbyShopsForUser = async (req, res) => {
   } catch (error) {
     console.error("Erreur lors de la recherche des boutiques proches:", error);
     res.status(500).json({ message: "Erreur serveur", error });
+  }
+};
+
+
+exports.getShopById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const shop = await Shop.findById(id);
+
+    if (!shop) {
+      return res.status(404).json({ message: "Boutique introuvable." });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+    const shopWithFullImage = {
+      ...shop._doc,
+      image: shop.image.startsWith("/uploads") ? `${baseUrl}${shop.image}` : shop.image
+    };
+
+    res.status(200).json(shopWithFullImage);
+  } catch (error) {
+    console.error("Erreur lors de la récupération de la boutique:", error);
+    res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };

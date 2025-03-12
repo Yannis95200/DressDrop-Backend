@@ -49,11 +49,6 @@ const userSchema = new mongoose.Schema(
       type: { type: String, enum: ["Point"], default: "Point" },
       coordinates: { type: [Number], default: [0, 0] }
     },
-
-    documents: {
-      drivingLicense: { type: String, required: function() { return this.role === "delivery"; } },
-      insurance: { type: String, required: function() { return this.role === "delivery"; } }
-    }
   }, { timestamps: true });
   
   // Index géospatial pour permettre la recherche par localisation

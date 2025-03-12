@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const OrderSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   shopId: { type: mongoose.Schema.Types.ObjectId, ref: "Shop", required: true },
+  cartId: { type: mongoose.Schema.Types.ObjectId, ref: "Cart" },
   items: [
     {
       productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
@@ -15,13 +16,11 @@ const OrderSchema = new mongoose.Schema({
   tip: { type: Number, default: 0 },
   grandTotal: { type: Number, required: true },
 
-  // Statut de la commande
   status: {
     type: String,
     enum: ['pending', 'preparing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending',
   },
-  // Adresse de livraison du client
   deliveryAddress: {
     street: { type: String, required: true },
     city: { type: String, required: true },

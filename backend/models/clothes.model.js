@@ -5,8 +5,8 @@ const clothesSchema = new mongoose.Schema({
   ownerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   name: { type: String, required: true },
   description: { type: String, required: true },
-  size: { type: String, required: true },
-  color: { type: String, required: true },
+  sizes: [{ type: String, required: true }],
+  colors: [{ type: String, required: true }],
   price: { type: Number, required: true },
   availability: { type: Boolean, default: true },
   images: [String],
@@ -17,5 +17,6 @@ const clothesSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = mongoose.model("Clothes", clothesSchema);
+
 
 

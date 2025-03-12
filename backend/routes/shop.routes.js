@@ -13,9 +13,6 @@ router.get("/:shopId/clothes", shopController.getClothesByShop);
 router.delete("/:id", checkRole(["seller"]), shopController.deleteShop);
 router.get("/nearby/:userId", shopController.getNearbyShopsForUser);
 router.post('/upload-shop-image', upload.single('image'), uploadController.uploadShopImage);
+router.get("/:id", shopController.getShopById);
 
 module.exports = router;
-
-
-
-

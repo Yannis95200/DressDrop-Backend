@@ -43,13 +43,43 @@ module.exports.getAllClothes = async (req, res) => {
 module.exports.getClothesById = async (req, res) => {
   try {
     const { id } = req.params;
-    const clothes = await ClothesModel.findById(id);
-    if (!clothes) {
-      return res.status(404).json({ message: "Vêtement introuvable" });
+    console.log("🔍 ID reçu dans l'API :", id);
+
+    if (!id) {
+      return res.status(400).json({ message: "ID de boutique manquant" });
     }
+
+    // Vérification si l'ID reçu correspond bien à `shopId`
+    const clothes = await ClothesModel.find({ shopId: id });
+
+    if (!clothes || clothes.length === 0) {
+      return res.status(404).json({ message: "Aucun vêtement trouvé pour cette boutique" });
+    }
+
     res.status(200).json(clothes);
   } catch (err) {
-    res.status(500).json({ message: "Erreur lors de la récupération du vêtement", error: err.message });
+    console.error("Erreur serveur :", err.message);
+    res.status(500).json({ message: "Erreur lors de la récupération des vêtements", error: err.message });
+  }
+};
+
+
+module.exports.getClothesItemById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("ID reçu dans l'API :", id);
+
+    // Cherche un seul article avec son ID
+    const item = await ClothesModel.findById(id);
+
+    if (!item) {
+      return res.status(404).json({ message: "Article introuvable" });
+    }
+
+    res.status(200).json(item);
+  } catch (err) {
+    console.error("Erreur serveur :", err.message);
+    res.status(500).json({ message: "Erreur lors de la récupération de l'article", error: err.message });
   }
 };
 

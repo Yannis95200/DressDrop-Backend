@@ -1,151 +1,144 @@
-const CartModel = require('../models/cart.model');
-const ClothesModel = require('../models/clothes.model');
+const CartModel = require("../models/cart.model");
+const ClothesModel = require("../models/clothes.model");
 
-// Ajout d'un article
 module.exports.addToCart = async (req, res) => {
-    try {
-        const { userId, items } = req.body;
+  try {
+    const { userId, items } = req.body;
 
-        // Vérifiez si les champs requis sont présents
-        if (!userId || !items || items.length === 0 || !items[0].productId) {
-            return res.status(400).json({ message: 'userId et les éléments avec productId sont requis' });
-        }
-
-        // Recherchez un panier existant pour l'utilisateur
-        let cart = await CartModel.findOne({ userId });
-
-        if (!cart) {
-            // Créez un nouveau panier si aucun n'existe
-            cart = new CartModel({ userId, items });
-        } else {
-            // Mettez à jour le panier existant
-            items.forEach((item) => {
-                const existingItem = cart.items.find((i) => i.productId.toString() === item.productId);
-                if (existingItem) {
-                    existingItem.quantity += item.quantity;
-                } else {
-                    cart.items.push(item);
-                }
-            });
-        }
-
-        // Récupérez les détails des vêtements pour calculer le prix total
-        const productIds = cart.items.map((item) => item.productId);
-        const clothes = await ClothesModel.find({ _id: { $in: productIds } });
-
-        // Calculez le prix total
-        let totalPrice = 0;
-        cart.items.forEach((item) => {
-            const product = clothes.find((p) => p._id.toString() === item.productId.toString());
-            if (product) {
-                totalPrice += product.price * item.quantity;
-            }
-        });
-
-        cart.totalPrice = totalPrice;
-
-        // Enregistrez le panier
-        const updatedCart = await cart.save();
-        res.status(200).json(updatedCart);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Erreur lors de l'ajout au panier", error });
+    if (!userId || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "ID utilisateur et articles requis" });
     }
-};
 
-// fonction pour enlever une quantité spécifique d'un produit
+    let cart = await CartModel.findOne({ userId });
+
+    if (!cart) {
+      cart = new CartModel({ userId, items });
+    } else {
+      items.forEach((item) => {
+        const existingItem = cart.items.find((i) => i.productId.toString() === item.productId);
+        existingItem ? (existingItem.quantity += item.quantity) : cart.items.push(item);
+      });
+    }
+
+    await updateTotalPrice(cart);
+
+    // Peupler les informations du produit avant de renvoyer la réponse
+    const populatedCart = await CartModel.populate(cart, {
+      path: "items.productId",
+      select: "name price images",
+      model: "Clothes",
+    });
+
+    res.status(200).json(populatedCart);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur", error });
+  }
+};
+// Supprimer un article du panier
 module.exports.removeFromCart = async (req, res) => {
-    try {
-        const { userId, productId, quantityToRemove } = req.body;
+  try {
+    const { cartId } = req.params;
+    const { productId } = req.body; // ✅ Récupère `productId` depuis le body
 
-        // Vérifiez si les champs nécessaires sont présents
-        if (!userId || !productId || !quantityToRemove) {
-            return res.status(400).json({ message: 'userId, productId etQuantityToRemove sont requis' });
-        }
-
-        // Trouvez le panier de l'utilisateur
-        let cart = await CartModel.findOne({ userId });
-
-        if (!cart) {
-            return res.status(404).json({ message: 'Panier introuvable' });
-        }
-
-        // Trouvez l'élément dans le panier
-        const existingItem = cart.items.find((item) => item.productId.toString() === productId);
-
-        if (!existingItem) {
-            return res.status(404).json({ message: 'Produit introuvable dans le panier' });
-        }
-
-        // Si la quantité à enlever est plus grande que la quantité existante, supprimez l'élément
-        if (existingItem.quantity <= quantityToRemove) {
-            cart.items = cart.items.filter((item) => item.productId.toString() !== productId);
-        } else {
-            existingItem.quantity -= quantityToRemove;
-        }
-
-        // Récupérez les détails des produits pour recalculer le prix total
-        const productIds = cart.items.map((item) => item.productId);
-        const clothes = await ClothesModel.find({ _id: { $in: productIds } });
-
-        // Calculez le prix total
-        let totalPrice = 0;
-        cart.items.forEach((item) => {
-            const product = clothes.find((p) => p._id.toString() === item.productId.toString());
-            if (product) {
-                totalPrice += product.price * item.quantity;
-            }
-        });
-
-        cart.totalPrice = totalPrice;
-
-        // Sauvegardez les changements dans le panier
-        const updatedCart = await cart.save();
-
-        // Répondre avec un message de succès
-        res.status(200).json({ message: 'Produit supprimé avec succès', updatedCart });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Erreur lors de la suppression du panier', error });
+    if (!cartId || !productId) {
+      return res.status(400).json({ message: "⚠️ ID du panier et du produit requis" });
     }
+
+    let cart = await CartModel.findById(cartId);
+    if (!cart) {
+      return res.status(404).json({ message: "⚠️ Panier introuvable" });
+    }
+
+    // Supprimer uniquement l'élément spécifique
+    cart.items = cart.items.filter((item) => item.productId.toString() !== productId);
+
+    // Mise à jour du total du panier
+    const productIds = cart.items.map((item) => item.productId);
+    const clothes = await ClothesModel.find({ _id: { $in: productIds } });
+
+    cart.totalPrice = cart.items.reduce((total, item) => {
+      const product = clothes.find((p) => p._id.toString() === item.productId.toString());
+      return total + (product ? product.price * item.quantity : 0);
+    }, 0);
+
+    await cart.save();
+
+    res.status(200).json({ message: "Produit supprimé avec succès", updatedCart: cart });
+  } catch (error) {
+    console.error("Erreur suppression article :", error);
+    res.status(500).json({ message: "Erreur serveur", error });
+  }
+};
+
+
+// Récupérer le contenu du panier
+module.exports.getCart = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: "ID utilisateur requis" });
+    }
+
+    // Récupérer le panier avec les détails du produit
+    const cart = await CartModel.findOne({ userId }).populate({
+      path: "items.productId",
+      select: "name price images",
+      model: "Clothes",
+    });
+
+    if (!cart) {
+      return res.status(404).json({ message: "Panier introuvable" });
+    }
+
+    // Log pour vérifier la structure des données
+    console.log("✅ Cart avec détails produits :", JSON.stringify(cart, null, 2));
+
+    res.status(200).json(cart);
+  } catch (error) {
+    console.error("Erreur serveur lors de la récupération du panier :", error);
+    res.status(500).json({ message: "Erreur serveur", error });
+  }
 };
 
 
 
-module.exports.getCart = async (req, res) => {
+
+// Vider complètement le panier
+module.exports.clearCart = async (req, res) => {
     try {
-        const { userId } = req.params;
-        // Vérifiez si l'ID utilisateur est présent
-        if (!userId) {
-            return res.status(400).json({ message: "l'ID utilisateur est requis" });
-        }
-
-        // Recherchez le panier de l'utilisateur
-        const cart = await CartModel.findOne({ userId });
-
-        if (!cart) {
-            return res.status(404).json({ message: 'Panier introuvable' });
-        }
-
-        // Récupérez les détails des produits dans le panier
-        const productIds = cart.items.map((item) => item.productId);
-        const clothes = await ClothesModel.find({ _id: { $in: productIds } });
-
-        // Calculez le prix total du panier
-        let totalPrice = 0;
-        cart.items.forEach((item) => {
-            const product = clothes.find((p) => p._id.toString() === item.productId.toString());
-            if (product) {
-                totalPrice += product.price * item.quantity;
-            }
-        });
-
-        cart.totalPrice = totalPrice;
-
-        // Renvoi du panier avec le prix total calculé
-        res.status(200).json(cart);
+      const { cartId } = req.params;
+  
+      if (!cartId) {
+        return res.status(400).json({ message: "ID du panier requis" });
+      }
+  
+      let cart = await CartModel.findById(cartId);
+  
+      if (!cart) {
+        return res.status(404).json({ message: "Panier introuvable" });
+      }
+  
+      cart.items = [];
+      cart.totalPrice = 0;
+      await cart.save();
+  
+      res.status(200).json({ message: "Panier vidé avec succès", cart });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Erreur lors de la récupération du panier', error });
+      console.error("Erreur lors du vidage du panier :", error);
+      res.status(500).json({ message: "Erreur serveur", error });
     }
+  };
+
+// Fonction utilitaire pour mettre à jour le prix total du panier
+const updateTotalPrice = async (cart) => {
+  const productIds = cart.items.map((item) => item.productId);
+  const clothes = await ClothesModel.find({ _id: { $in: productIds } });
+
+  cart.totalPrice = cart.items.reduce((total, item) => {
+    const product = clothes.find((p) => p._id.toString() === item.productId.toString());
+    return total + (product ? product.price * item.quantity : 0);
+  }, 0);
+
+  await cart.save();
 };

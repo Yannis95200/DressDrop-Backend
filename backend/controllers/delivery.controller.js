@@ -5,7 +5,6 @@ const Shop = require('../models/shop.model');
 const googleMaps = require('@google/maps');
 
 
-
 const { Client } = require("@googlemaps/google-maps-services-js");
 
 const googleMapsClient = new Client({});

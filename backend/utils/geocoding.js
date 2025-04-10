@@ -12,12 +12,12 @@ const getCoordinatesFromAddress = async (address) => {
     const formattedAddress = `${address.street}, ${address.city}, ${address.postalCode}, ${address.country}`;
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formattedAddress)}`;
 
-    console.log("📡 Requête de géocodage envoyée à :", url);
+    console.log("Requête de géocodage envoyée à :", url);
 
     const response = await axios.get(url);
 
     if (response.data.length === 0) {
-      console.log("❌ Adresse introuvable :", formattedAddress);
+      console.log("Adresse introuvable :", formattedAddress);
       return null;
     }
 
@@ -27,10 +27,9 @@ const getCoordinatesFromAddress = async (address) => {
       coordinates: [parseFloat(location.lon), parseFloat(location.lat)],
     };
   } catch (error) {
-    console.error("❌ Erreur lors du géocodage :", error.message);
+    console.error("Erreur lors du géocodage :", error.message);
     return null;
   }
 };
 
-module.exports = {geocoder,getCoordinatesFromAddress,
-};
+module.exports = { geocoder, getCoordinatesFromAddress };

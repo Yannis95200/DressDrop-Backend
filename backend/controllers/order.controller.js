@@ -36,7 +36,7 @@ const estimateDeliveryTime = (distance) => {
   const timeInHours = distance / averageSpeedKmPerHour;
   const timeInMinutes = Math.round(timeInHours * 60);
 
-  return timeInMinutes < 15 ? 15 : timeInMinutes;
+  return timeInMinutes < 10 ? 10 : timeInMinutes;
 };
 
 // Création d'une commande à partir du panier
@@ -292,8 +292,6 @@ module.exports.removeItemFromOrder = async (req, res) => {
   }
 };
 
-
-// ✅ Récupérer l'historique des commandes d'un utilisateur
 module.exports.getUserOrders = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -303,7 +301,6 @@ module.exports.getUserOrders = async (req, res) => {
       return res.status(400).json({ message: "ID utilisateur invalide" });
     }
 
-    // ✅ Correction du populate
     const orders = await OrderModel.find({ userId: new mongoose.Types.ObjectId(userId) })
       .populate({
         path: "shopId",
@@ -325,6 +322,38 @@ module.exports.getUserOrders = async (req, res) => {
     res.status(200).json(orders);
   } catch (error) {
     console.error("Erreur lors de la récupération des commandes :", error);
+    res.status(500).json({ message: "Erreur serveur", error });
+  }
+};
+
+// Obtenir les commandes par boutique
+module.exports.getOrdersByShop = async (req, res) => {
+  try {
+    const { shopId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(shopId)) {
+      return res.status(400).json({ message: "ID de boutique invalide" });
+    }
+
+    const orders = await OrderModel.find({ shopId })
+      .populate({
+        path: "userId",
+        select: "pseudo email address",
+      })
+      .populate({
+        path: "items.productId",
+        select: "name price images",
+        model: "Clothes",
+      })
+      .sort({ createdAt: -1 });
+
+    if (!orders || orders.length === 0) {
+      return res.status(404).json({ message: "Aucune commande trouvée pour cette boutique." });
+    }
+
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des commandes de la boutique :", error);
     res.status(500).json({ message: "Erreur serveur", error });
   }
 };

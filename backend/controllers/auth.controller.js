@@ -77,7 +77,7 @@ module.exports.signIn = async (req, res) => {
     }
 
     const auth = await bcrypt.compare(password, user.password);
-    if (!auth) return res.status(401).json({ message: "Mot de passe incorrect" });
+    if (!auth) return res.status(401).json({ message: "Mot de passe ou Mail incorrect" });
 
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.TOKEN_SECRET, { expiresIn: "1d" });
 
@@ -98,6 +98,7 @@ module.exports.signIn = async (req, res) => {
 
 module.exports.logout = (req, res) => {
   // Efface le cookie 'jwt'
+  console.log("Données reçues :");
   res.clearCookie('jwt', { httpOnly: true, secure: true });
   res.status(200).json({ message: 'Déconnexion réussie' });
 };

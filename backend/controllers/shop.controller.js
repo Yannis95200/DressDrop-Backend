@@ -1,7 +1,8 @@
 const Shop = require("../models/shop.model");
 const User = require("../models/user.model");
 const Clothes = require("../models/clothes.model");
-const geocoder = require("../utils/geocoding");
+const { geocoder } = require("../utils/geocoding");
+
 
 // Créer une boutique
 exports.createShop = async (req, res) => {
@@ -45,45 +46,47 @@ exports.updateShop = async (req, res) => {
     const { id } = req.params;
     const { name, description, ShopAddress } = req.body;
 
-    // Vérifiez que l'utilisateur est un seller
+    // Vérifiez que l'utilisateur est un "seller"
     if (req.user.role !== "seller") {
-      return res.status(403).json({ message: "Accès refusé. Cette action est réservée aux vendeurs." });
+      return res.status(403).json({ message: "Accès refusé. Seuls les vendeurs peuvent modifier une boutique." });
     }
 
-    // Vérifiez que l'utilisateur est le propriétaire de la boutique
+    // Vérifiez que la boutique existe
     const shop = await Shop.findById(id);
     if (!shop) {
       return res.status(404).json({ message: "Boutique introuvable." });
     }
+
+    // Vérifiez que l'utilisateur est bien le propriétaire de la boutique
     if (shop.ownerId.toString() !== req.user.id) {
       return res.status(403).json({ message: "Vous n'êtes pas autorisé à modifier cette boutique." });
     }
 
-    // Mise à jour des données
-    const updates = { name, description, ShopAddress };
-
+    // Préparation des mises à jour
+    const updates = {};
+    if (name) updates.name = name;
+    if (description) updates.description = description;
     if (ShopAddress) {
-      // Géocodage de l'adresse de la boutique pour obtenir les coordonnées
-      const geoData = await geocoder.geocode(`${ShopAddress.street}, ${ShopAddress.city}, ${ShopAddress.country}`);
-      if (geoData && geoData.length > 0) {
-        updates.location = {
-          type: "Point",
-          coordinates: [geoData[0].longitude, geoData[0].latitude],
-        };
+      // Géocodage de la nouvelle adresse
+      const locationData = await getCoordinatesFromAddress(ShopAddress);
+      if (locationData) {
+        updates.ShopAddress = ShopAddress;
+        updates.location = locationData;
       } else {
-        // Mise à jour du message d'erreur pour l'adresse de la boutique
-        return res.status(400).json({ message: "Adresse de la boutique invalide." });
+        return res.status(400).json({ message: "Adresse invalide. Impossible d'obtenir des coordonnées." });
       }
     }
 
-    // Mise à jour de la boutique dans la base de données
+    // Mise à jour dans la base de données
     const updatedShop = await Shop.findByIdAndUpdate(id, updates, { new: true });
-    res.status(200).json({ message: "Boutique mise à jour avec succès", shop: updatedShop });
+
+    return res.status(200).json({ message: "Boutique mise à jour avec succès", shop: updatedShop });
   } catch (error) {
-    // Gérer l'erreur si une exception se produit
-    res.status(500).json({ message: "Erreur lors de la mise à jour de la boutique", error: error.message });
+    console.error("Erreur lors de la mise à jour de la boutique :", error);
+    return res.status(500).json({ message: "Erreur lors de la mise à jour de la boutique", error: error.message });
   }
 };
+
 
 // Obtenir toutes les boutiques
 exports.getAllShops = async (req, res) => {

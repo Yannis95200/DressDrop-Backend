@@ -9,6 +9,6 @@ router.put('/:orderId', orderController.updateOrder);
 router.delete('/:orderId', orderController.deleteOrder);
 router.delete("/:orderId/item/:itemId", orderController.removeItemFromOrder);
 router.get("/user/:userId", orderController.getUserOrders);
-
+router.get("/shop/:shopId", orderController.getOrdersByShop);
 
 module.exports = router;

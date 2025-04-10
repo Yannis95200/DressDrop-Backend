@@ -49,21 +49,23 @@ module.exports.userInfo = async (req, res) => {
     }
 
     try {
-        const user = await UserModel.findById(id);
+        const user = await UserModel.findById(id).select("pseudo email picture");
         if (!user) {
             return res.status(404).json({ message: 'Utilisateur introuvable' });
         }
+
+        console.log("Données utilisateur envoyées :", user);
         res.status(200).json(user);
     } catch (err) {
         res.status(500).json({ message: 'Erreur serveur', error: err.message });
     }
 };
-
 // Mettre à jour un utilisateur
 module.exports.updateUser = async (req, res) => {
     const { id } = req.params;
+    console.log("Requête de mise à jour reçue pour l'utilisateur :", id);
+    console.log("Données reçues :", req.body);
 
-    // Vérifier si l'ID est valide
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({ message: "ID utilisateur invalide : " + id });
     }
@@ -77,17 +79,22 @@ module.exports.updateUser = async (req, res) => {
         const updateFields = {};
         if (pseudo) updateFields.pseudo = pseudo;
 
-        // Si l'adresse est mise à jour, recalculer la localisation
+        // Géolocalisation si l'adresse est modifiée
         if (address) {
+            console.log("Adresse avant traitement :", address);
             const newLocation = await getCoordinatesFromAddress(address);
+
             if (!newLocation) {
+                console.error("Échec de géocodage pour :", address);
                 return res.status(400).json({ message: "Impossible de localiser cette adresse." });
             }
+
             updateFields.address = address;
             updateFields.location = newLocation;
+            console.log("Nouvelle localisation obtenue :", newLocation);
         }
 
-        // Mettre à jour l'utilisateur
+        // Mise à jour dans la base de données
         const updatedUser = await UserModel.findOneAndUpdate(
             { _id: id },
             { $set: updateFields },
@@ -98,11 +105,14 @@ module.exports.updateUser = async (req, res) => {
             return res.status(404).json({ message: "Utilisateur introuvable" });
         }
 
+        console.log("Mise à jour réussie :", updatedUser);
         res.status(200).json(updatedUser);
     } catch (err) {
+        console.error("Erreur serveur lors de la mise à jour :", err);
         res.status(500).json({ message: "Erreur lors de la mise à jour de l'utilisateur", error: err.message });
     }
 };
+
 
 
 // Supprimer un utilisateur

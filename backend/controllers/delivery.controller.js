@@ -247,3 +247,17 @@ module.exports.completeDelivery = async (req, res) => {
     res.status(500).json({ message: "Erreur lors de la finalisation de la commande." });
   }
 };
+
+exports.getAllDeliveries = async (req, res) => {
+  try {
+    const deliveries = await Delivery.find()
+      .populate("orderId")
+      .populate("deliveryPerson")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(deliveries);
+  } catch (err) {
+    console.error("Erreur récupération livraisons :", err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};

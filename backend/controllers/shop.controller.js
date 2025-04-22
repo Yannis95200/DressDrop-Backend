@@ -200,3 +200,35 @@ exports.getShopById = async (req, res) => {
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };
+
+exports.getShopsByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const shops = await Shop.find({ ownerId: userId });
+
+    if (!shops || shops.length === 0) {
+      return res.status(404).json({ message: "Aucune boutique trouvée pour cet utilisateur." });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const shopsWithFullImage = shops.map(shop => ({
+      ...shop._doc,
+      image: shop.image.startsWith("/uploads") ? `${baseUrl}${shop.image}` : shop.image
+    }));
+
+    res.status(200).json(shopsWithFullImage);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des boutiques de l'utilisateur :", error);
+    res.status(500).json({ message: "Erreur serveur", error: error.message });
+  }
+}; 
+
+exports.getMyShops = async (req, res) => {
+  try {
+    const shops = await Shop.find({ ownerId: req.user.id });
+    res.status(200).json(shops);
+  } catch (err) {
+    res.status(500).json({ message: "Erreur lors de la récupération des boutiques" });
+  }
+};

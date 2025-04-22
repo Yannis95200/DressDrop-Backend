@@ -204,7 +204,12 @@ module.exports.getOrder = async (req, res) => {
       return res.status(400).json({ message: "Numéro de commande invalide" });
     }
 
-    const order = await OrderModel.findById(orderId).populate("shopId userId");
+    const order = await OrderModel.findById(orderId)
+      .populate("shopId userId")
+      .populate({
+        path: "items.productId",
+        model: "Clothes",
+      });
 
     if (!order) {
       return res.status(404).json({ message: "Commande introuvable" });
@@ -216,6 +221,7 @@ module.exports.getOrder = async (req, res) => {
     res.status(500).json({ message: "Erreur lors de la récupération de la commande", error });
   }
 };
+
 
 
 // Mettre à jour les commandes
@@ -355,5 +361,39 @@ module.exports.getOrdersByShop = async (req, res) => {
   } catch (error) {
     console.error("Erreur lors de la récupération des commandes de la boutique :", error);
     res.status(500).json({ message: "Erreur serveur", error });
+  }
+};
+// Récupérer le chiffre d'affaires par boutique
+exports.getRevenueStats = async (req, res) => {
+  try {
+    const { shopId } = req.query;
+
+    if (!shopId || !mongoose.Types.ObjectId.isValid(shopId)) {
+      return res.status(400).json({ message: "ID de boutique invalide" });
+    }
+
+    // 🧮 On récupère toutes les commandes de cette boutique (sans filtrer par statut)
+    const orders = await OrderModel.find({ shopId }).select("totalPrice createdAt");
+
+    const revenuePerMonth = {};
+
+    orders.forEach((order) => {
+      const month = new Date(order.createdAt).toISOString().slice(0, 7); // ex: "2025-04"
+      if (!revenuePerMonth[month]) {
+        revenuePerMonth[month] = 0;
+      }
+      revenuePerMonth[month] += order.totalPrice;
+    });
+
+    // On retourne un tableau exploitable par le front
+    const result = Object.entries(revenuePerMonth).map(([month, totalRevenue]) => ({
+      month,
+      totalRevenue,
+    }));
+
+    res.status(200).json({ revenuePerMonth: result });
+  } catch (error) {
+    console.error("Erreur récupération chiffre d'affaires :", error);
+    res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };

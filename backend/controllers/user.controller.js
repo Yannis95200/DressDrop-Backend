@@ -49,7 +49,8 @@ module.exports.userInfo = async (req, res) => {
     }
 
     try {
-        const user = await UserModel.findById(id).select("pseudo email picture");
+        const user = await UserModel.findById(id).select("pseudo email picture role");
+
         if (!user) {
             return res.status(404).json({ message: 'Utilisateur introuvable' });
         }

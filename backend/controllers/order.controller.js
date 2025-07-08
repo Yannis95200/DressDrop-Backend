@@ -132,7 +132,7 @@ module.exports.createOrderFromCart = async (req, res) => {
 
 
 // Création de la commande avec estimation du temps de livraison
-module.exports.createOrder = async (req, res) => {
+exports.createOrder = async (req, res) => {
   try {
     const { userId, shopId, items, totalPrice, deliveryFee = 0, tip = 0 } = req.body;
 
@@ -141,32 +141,15 @@ module.exports.createOrder = async (req, res) => {
     }
 
     const user = await UserModel.findById(userId);
-    if (!user || !user.location || !Array.isArray(user.location.coordinates) || user.location.coordinates.length < 2) {
-      console.error("Erreur: Adresse utilisateur introuvable ou incorrecte:", user);
-      return res.status(400).json({ message: "Adresse de l'utilisateur invalide" });
-    }
-
     const shop = await ShopModel.findById(shopId);
-    if (!shop || !shop.location || !Array.isArray(shop.location.coordinates) || shop.location.coordinates.length < 2) {
-      console.error("Erreur: Adresse de la boutique introuvable ou incorrecte:", shop);
-      return res.status(400).json({ message: "Adresse de la boutique invalide" });
+
+    if (!user?.location?.coordinates || !shop?.location?.coordinates) {
+      return res.status(400).json({ message: "Coordonnées GPS manquantes pour le shop ou l'utilisateur." });
     }
 
-    // Extraire les coordonnées correctes
-    const userCoordinates = user.location.coordinates;
-    const shopCoordinates = shop.location.coordinates;
-
-    console.log("Adresse du magasin:", shopCoordinates);
-    console.log("Adresse de l'utilisateur:", userCoordinates);
-
-    // Calcul de la distance et du temps estimé
-    const distance = haversine(shopCoordinates, userCoordinates);
+    const distance = haversine(shop.location.coordinates, user.location.coordinates);
     const estimatedTime = estimateDeliveryTime(distance);
 
-    console.log(`Distance calculée : ${distance.toFixed(2)} km`);
-    console.log(`Temps de livraison estimé : ${estimatedTime} min`);
-
-    // Création de la commande
     const newOrder = new OrderModel({
       userId,
       shopId,
@@ -185,13 +168,22 @@ module.exports.createOrder = async (req, res) => {
     });
 
     await newOrder.save();
-    res.status(201).json({message: "Commande créée avec succès",order: newOrder,estimatedTime: estimatedTime});
+
+    // ✅ Planifier automatiquement une livraison
+    await axios.post("http://localhost:5000/deliveries/schedule", {
+      orderId: newOrder._id
+    });
+
+    res.status(201).json({
+      message: "Commande créée avec succès",
+      order: newOrder,
+      estimatedTime
+    });
   } catch (error) {
     console.error("Erreur lors de la commande :", error);
     res.status(500).json({ message: "Erreur serveur", error });
   }
 };
-
 
 
 
@@ -372,20 +364,18 @@ exports.getRevenueStats = async (req, res) => {
       return res.status(400).json({ message: "ID de boutique invalide" });
     }
 
-    // 🧮 On récupère toutes les commandes de cette boutique (sans filtrer par statut)
     const orders = await OrderModel.find({ shopId }).select("totalPrice createdAt");
 
     const revenuePerMonth = {};
 
     orders.forEach((order) => {
-      const month = new Date(order.createdAt).toISOString().slice(0, 7); // ex: "2025-04"
+      const month = new Date(order.createdAt).toISOString().slice(0, 7);
       if (!revenuePerMonth[month]) {
         revenuePerMonth[month] = 0;
       }
       revenuePerMonth[month] += order.totalPrice;
     });
 
-    // On retourne un tableau exploitable par le front
     const result = Object.entries(revenuePerMonth).map(([month, totalRevenue]) => ({
       month,
       totalRevenue,

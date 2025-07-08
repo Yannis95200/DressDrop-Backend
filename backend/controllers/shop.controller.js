@@ -1,11 +1,11 @@
 const Shop = require("../models/shop.model");
 const User = require("../models/user.model");
 const Clothes = require("../models/clothes.model");
-const { geocoder } = require("../utils/geocoding");
+const { geocoder,getCoordinatesFromAddress } = require("../utils/geocoding");
 
 
 // Créer une boutique
-exports.createShop = async (req, res) => {
+module.exports.createShop = async (req, res) => {
   try {
     const { name, description, ShopAddress, image } = req.body;
     const ownerId = req.user.id;
@@ -41,7 +41,7 @@ exports.createShop = async (req, res) => {
 };
 
 // Mettre à jour une boutique
-exports.updateShop = async (req, res) => {
+module.exports.updateShop = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, ShopAddress } = req.body;
@@ -89,7 +89,7 @@ exports.updateShop = async (req, res) => {
 
 
 // Obtenir toutes les boutiques
-exports.getAllShops = async (req, res) => {
+module.exports.getAllShops = async (req, res) => {
   try {
     const shops = await Shop.find();
     const baseUrl = `${req.protocol}://${req.get("host")}`;
@@ -106,7 +106,7 @@ exports.getAllShops = async (req, res) => {
   }
 };
 // Récupérer les vêtements d'une boutique
-exports.getClothesByShop = async (req, res) => {
+module.exports.getClothesByShop = async (req, res) => {
   try {
     const { shopId } = req.params;
 
@@ -123,7 +123,7 @@ exports.getClothesByShop = async (req, res) => {
 };
 
 // Supprimer une boutique
-exports.deleteShop = async (req, res) => {
+module.exports.deleteShop = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -222,7 +222,7 @@ exports.getShopsByUser = async (req, res) => {
     console.error("Erreur lors de la récupération des boutiques de l'utilisateur :", error);
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
-}; 
+};
 
 exports.getMyShops = async (req, res) => {
   try {

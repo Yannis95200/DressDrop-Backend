@@ -97,6 +97,7 @@ module.exports.scheduleDelivery = async (req, res) => {
       shopAddress: shop.ShopAddress,
       userAddress: user.address,
       estimatedDeliveryTime: { distanceInKm, timeInMinutes },
+      status: "pending",
     });
 
     await delivery.save();

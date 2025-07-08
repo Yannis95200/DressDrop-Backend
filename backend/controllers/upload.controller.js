@@ -149,35 +149,20 @@ exports.uploadClothesImage = async (req, res) => {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    // Déplacer l'image dans le bon dossier
+    // Déplacer le fichier
     const filePath = path.join(uploadDir, filename);
     await fs.promises.rename(req.file.path, filePath);
 
-    // Assurez-vous d'envoyer le `clothesId` dans la requête pour mettre à jour le vêtement
-    const clothes = await Clothes.findByIdAndUpdate(
-      req.body.clothesId,  // Assurez-vous d'envoyer l'ID du vêtement dans la requête
-      { $push: { images: `/uploads/clothes/${filename}` } },  // Ajouter l'image au tableau d'images
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    );
+    // Retourner uniquement le chemin relatif
+    const relativePath = `/uploads/clothes/${filename}`;
 
-    if (!clothes) {
-      return res.status(404).json({ error: "Vêtement introuvable" });
-    }
-
-    res.status(201).json({
-      message: "Image téléchargée avec succès !",
-      clothes
+    return res.status(200).json({
+      message: "Image uploadée avec succès",
+      imageUrl: relativePath, // ✅ Chemin RELATIF
     });
-  } catch (err) {
-    console.error("Erreur lors du téléchargement :", err.message);
 
-    if (err.message === "Type de fichier non autorisé") {
-      return res.status(400).json({ error: "Type de fichier non autorisé (JPG, PNG uniquement)." });
-    }
-    if (err.message === "Le fichier est trop volumineux") {
-      return res.status(400).json({ error: "Le fichier dépasse 500 Ko." });
-    }
-
-    return res.status(500).json({ error: "Erreur serveur." });
+  } catch (error) {
+    console.error("Erreur upload image :", error.message);
+    return res.status(500).json({ error: "Erreur lors de l’upload", details: error.message });
   }
-}
+};

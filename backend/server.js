@@ -20,12 +20,21 @@ app.use(express.json())
 
 // Middleware CORS
 // Configuration CORS pour Express
-app.use(cors({
-  origin: ["http://localhost:3000", "http://10.0.2.2:5000"],
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  allowedHeaders: ["Content-Type", "Authorization"],
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://192.168.0.70:19006'
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
-}));
+};
+app.use(cors(corsOptions));
 
 // Middleware pour parser les cookies
 app.use(cookieParser());

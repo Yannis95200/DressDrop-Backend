@@ -4,27 +4,36 @@ const ShopModel = require("../models/shop.model");
 // Ajouter des vêtements
 module.exports.addClothes = async (req, res) => {
   try {
-    const { shopId } = req.body;
+    const { name, price, sizes, colors, shopId } = req.body;
 
-    // Vérifiez que la boutique existe
+    if (!name || !price || !sizes || !colors || !shopId) {
+      return res.status(400).json({ message: "Tous les champs sont requis" });
+    }
+
     const shop = await ShopModel.findById(shopId);
     if (!shop) {
       return res.status(404).json({ message: "Boutique introuvable" });
     }
-    // Vérifiez que le champ owner existe avant d'appeler toString()
+
     if (shop.ownerId.toString() !== req.user.id) {
       return res.status(403).json({ message: "Accès refusé. Cette boutique ne vous appartient pas." });
     }
 
-    // Créez et enregistrez le vêtement
     const newClothes = new ClothesModel({
-      ...req.body,
+      name,
+      description: req.body.description || "",
+      price,
+      sizes,
+      colors,
+      images: req.body.images || [],
       ownerId: req.user.id,
       shopId: shopId,
     });
+
     const savedClothes = await newClothes.save();
     res.status(201).json(savedClothes);
   } catch (err) {
+    console.error("Erreur création vêtement :", err);
     res.status(400).json({ message: "Erreur lors de l'ajout du vêtement", error: err.message });
   }
 };
